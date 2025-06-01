@@ -3,7 +3,7 @@ import json
 import requests
 from github import Github, GithubIntegration
 
-def handle_file(payload, app_id, private_key):
+def handle_webhook(payload, app_id, private_key):
     # 1. Get installation ID
     installation_id = payload.get("installation", {}).get("id")
     if not installation_id:
